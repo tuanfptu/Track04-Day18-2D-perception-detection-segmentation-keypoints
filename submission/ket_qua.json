@@ -1,0 +1,85 @@
+{
+  "progress": {
+    "box_iou": "ok",
+    "nms": "ok",
+    "batched_nms": "ok",
+    "average_precision": "ok",
+    "mask_iou": "ok",
+    "polygon_to_mask": "ok",
+    "mask_to_yolo_seg": "ok",
+    "autolabel": "ok",
+    "oks": "ok",
+    "joint_angle": "ok",
+    "FLIP_IDX": "ok"
+  },
+  "latency": [
+    {
+      "Cấu hình": "one-to-many + NMS, conf 0.25",
+      "preprocess (ms)": 1.6,
+      "inference (ms)": 8.5,
+      "postprocess (ms)": 1.1,
+      "số box": 5
+    },
+    {
+      "Cấu hình": "one-to-many + NMS, conf 0.001",
+      "preprocess (ms)": 1.58,
+      "inference (ms)": 8.63,
+      "postprocess (ms)": 1.27,
+      "số box": 203
+    },
+    {
+      "Cấu hình": "one-to-one NMS-free, conf 0.25",
+      "preprocess (ms)": 1.62,
+      "inference (ms)": 8.88,
+      "postprocess (ms)": 0.41,
+      "số box": 5
+    },
+    {
+      "Cấu hình": "one-to-one NMS-free, conf 0.001",
+      "preprocess (ms)": 1.61,
+      "inference (ms)": 9.03,
+      "postprocess (ms)": 0.4,
+      "số box": 204
+    }
+  ],
+  "result_4b": {
+    "flip_idx": "giải phẫu",
+    "epochs": 40,
+    "imgsz": 640,
+    "Box mAP50-95": 0.908358579157668,
+    "Pose mAP50": 0.995,
+    "Pose mAP50-95": 0.4504893733537381,
+    "train (phút)": 3.2
+  },
+  "result_4c": [
+    {
+      "Model": "flip_idx giải phẫu",
+      "Pose mAP50-95 — val gốc": 0.4504893733537381,
+      "Pose mAP50-95 — val lật gương": 0.39592085621293527
+    },
+    {
+      "Model": "flip_idx đồng nhất",
+      "Pose mAP50-95 — val gốc": 0.4286790344652161,
+      "Pose mAP50-95 — val lật gương": 0.29813419510166533
+    }
+  ],
+  "answers": {
+    "Q1": "Faster R-CNN trả về output đã hậu xử lý theo từng object: boxes, labels và scores sau RPN/RoI head. YOLO26 ở mức raw head trả về tensor dày theo lưới, ví dụ dạng (1, 84, 8400) với ảnh 640x640, trong đó mỗi vị trí dự đoán box và score class.\nKhác biệt chính là Faster R-CNN sinh proposal rồi phân loại từng proposal, còn YOLO dự đoán một lượt trên nhiều tầng feature. Vì vậy YOLO cần bước decode/NMS để biến nhiều dự đoán chồng lấn thành danh sách object cuối cùng.",
+    "Q2": "Khi hạ confidence xuống thấp, head one-to-many tạo rất nhiều box ứng viên quanh cùng một object, nên NMS phải dọn duplicate. Head one-to-one được train để mỗi object chỉ có một dự đoán chính nên ít phụ thuộc NMS hơn.\nĐổi lại, one-to-many vẫn hữu ích trong train vì cung cấp nhiều positive sample quanh object, làm tín hiệu học ổn định hơn và giúp backbone/head học tốt hơn.",
+    "Q3": "Voi anh bus, sau NMS camera dem duoc 4 nguoi va 1 xe buyt. Detector cho biet so nguoi va vat the quan trong trong canh. Can do latency cua ca pipeline vi decode va NMS co the ton thoi gian khi confidence thap va so candidate tang.",
+    "Q4": "Semantic segmentation gan class cho tung pixel nhung khong tach instance, nen nhieu nguoi co the dinh thanh mot vung. Instance segmentation tach tung object rieng va phu hop hon de dem nguoi. Xe buyt bi nham thanh train cho thay model co the nham giua cac phuong tien lon gan nhau ve hinh dang.",
+    "Q5": "YOLO-seg dung prototype chung nen nhanh, nhung bien mask cua object nho de tho. Mask R-CNN du doan mask rieng cho tung RoI, song do phan giai mask co gioi han. Neu moi mask YOLO tu lay mask Mask R-CNN co IoU cao nhat, nhieu mask co the ghep voi cung mot doi tuong; Hungarian matching tranh loi many-to-one.",
+    "Q6": "Prompt bang box thuong on dinh hon mot diem vi box cho SAM biet pham vi object. Mot diem khong dai dien co the lam SAM chon sai vung. Khi can chat luong cao hoac class thay doi, co the dung SAM luc trien khai; khi can toc do va class co dinh, dung SAM tao nhan de train YOLO-seg nho.",
+    "Q7": "Keypoint R-CNN tra ve keypoint kem diem tin cay cho tung nguoi; YOLO26n-pose du doan toa do va confidence keypoint bang head one-stage. Khi ha KP_THR rat thap, Keypoint R-CNN van ve ca keypoint ngoai anh hoac khong chac chan. Do do can loc theo visibility/confidence truoc khi dung keypoint cho luat phat hien nga.",
+    "Q8": "OKS phạt sai số keypoint theo kích thước object và độ khó của từng keypoint. Cùng lệch 8 px nhưng người nhỏ bị phạt mạnh hơn người lớn, vì 8 px chiếm tỉ lệ lớn hơn trên cơ thể.\nCác keypoint có sigma nhỏ như mắt/mũi cũng bị phạt mạnh hơn keypoint dễ/ít chính xác hơn như hông vai, nên OKS phản ánh cả scale lẫn độ khó gán nhãn.",
+    "Q9": "`joint_angle` đo góc tại khớp bằng hai vector cùng xuất phát từ điểm giữa. Trong ví dụ phát hiện ngã, góc thân người so với phương đứng nhỏ thì xem là đứng, còn sau khi xoay 90 độ góc lớn nên bị gắn cờ ngã.\nLuật này đơn giản, dễ giải thích, nhưng phụ thuộc chất lượng keypoint và góc camera; thực tế nên kết hợp confidence, tracking theo thời gian và ngưỡng theo bối cảnh.",
+    "Q10": "`flip_idx` phải hoán đổi nhãn giải phẫu trái/phải sau khi ảnh bị lật ngang. Các điểm nằm trên trục giữa như nose, head, withers, tail_base giữ nguyên.\nNếu để identity, augmentation lật ảnh sẽ dạy model rằng chân trái/phải không đổi sau khi soi gương, làm model dễ học sai quy ước trái/phải dù mAP trên val gốc có thể vẫn cao.",
+    "Q11": "Khi xem 6 ảnh val tệ nhất, hai kiểu lỗi cần chú ý là nhầm trái/phải ở các chân đối xứng và lệch mạnh ở bàn chân/cổ chân khi chân bị che hoặc tư thế hiếm. Với lỗi trái/phải, cần kiểm tra lại `flip_idx` và bổ sung val lật gương; với lỗi che khuất, nên thêm ảnh tương tự hoặc tăng dữ liệu có occlusion.\nNếu có ảnh không phát hiện được hổ, nguyên nhân thường là box/confidence thấp hoặc pose quá khác train; có thể giảm conf khi phân tích lỗi, tăng epoch hợp lý, hoặc bổ sung dữ liệu cùng kiểu cảnh.",
+    "Q12": "Pose mAP là chỉ số tổng hợp tốt để so model, nhưng không đủ để phát hiện mọi lỗi nghiệp vụ. Một model có thể mAP cao trên val gốc nhưng vẫn sai trái/phải nếu tập val không có ảnh lật hoặc không kiểm tra đối xứng.\nVì vậy ngoài bảng mAP cần xem ảnh val tệ nhất, sai số theo từng keypoint và kiểm thử trên val lật gương để bắt các lỗi do augmentation/nhãn."
+  },
+  "env": {
+    "device": "cuda",
+    "torch": "2.11.0+cu128",
+    "ultralytics": "8.4.171"
+  }
+}
